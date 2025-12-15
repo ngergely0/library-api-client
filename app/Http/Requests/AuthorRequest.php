@@ -23,6 +23,9 @@ class AuthorRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
+            'nationality' => 'required|string|max:255',
+            'age' => 'required|integer|min:0',
+            'gender' => 'required|string|in:male,female',
         ];
     }
 
@@ -37,6 +40,14 @@ class AuthorRequest extends FormRequest
             'name.required' => 'A szerző neve kötelező.',
             'name.string' => 'A szerző nevének szövegnek kell lennie.',
             'name.max' => 'A szerző neve maximum 255 karakter lehet.',
+            'nationality.required' => 'A nemzetiség megadása kötelező.',
+            'nationality.string' => 'A nemzetiségnek szövegnek kell lennie.',
+            'nationality.max' => 'A nemzetiség maximum 255 karakter lehet.',
+            'age.required' => 'Az életkor megadása kötelező.',
+            'age.integer' => 'Az életkornak egész számnak kell lennie.',
+            'age.min' => 'Az életkor nem lehet negatív.',
+            'gender.required' => 'A nem megadása kötelező.',
+            'gender.in' => 'A nem csak "male" vagy "female" lehet.',
         ];
     }
 }

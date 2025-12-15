@@ -26,6 +26,9 @@ class BookRequest extends FormRequest
             'author_id' => 'required|integer',
             'category_id' => 'required|integer',
             'isbn' => 'nullable|string|max:20',
+            'price' => 'required|integer|min:0',
+            'publication_date' => 'required|date',
+            'edition' => 'required|string|max:255',
         ];
     }
 
@@ -46,6 +49,14 @@ class BookRequest extends FormRequest
             'category_id.integer' => 'Érvénytelen kategória azonosító.',
             'isbn.string' => 'Az ISBN szövegnek kell lennie.',
             'isbn.max' => 'Az ISBN maximum 20 karakter lehet.',
+            'price.required' => 'Az ár megadása kötelező.',
+            'price.integer' => 'Az árnak egész számnak kell lennie.',
+            'price.min' => 'Az ár nem lehet negatív.',
+            'publication_date.required' => 'A kiadás dátuma kötelező.',
+            'publication_date.date' => 'Érvénytelen dátum formátum.',
+            'edition.required' => 'A kiadás megadása kötelező.',
+            'edition.string' => 'A kiadásnak szövegnek kell lennie.',
+            'edition.max' => 'A kiadás maximum 255 karakter lehet.',
         ];
     }
 }

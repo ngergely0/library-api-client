@@ -13,7 +13,15 @@
                     <div class="mb-6">
                         <h3 class="text-2xl font-bold text-gray-900 mb-2">{{ $entity['name'] ?? 'Ismeretlen' }}</h3>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Cover Image -->
+                            @if(isset($entity['cover']))
+                                <div class="row-span-3">
+                                    <p class="text-sm text-gray-500 mb-2">Borítókép</p>
+                                    <img src="{{ Str::startsWith($entity['cover'], 'http') ? $entity['cover'] : asset($entity['cover']) }}" alt="Borítókép" class="w-full max-w-xs rounded-lg shadow-md">
+                                </div>
+                            @endif
+
                             <div>
                                 <p class="text-sm text-gray-500">Szerző</p>
                                 <p class="text-lg font-medium">
@@ -38,6 +46,21 @@
                                         Ismeretlen
                                     @endif
                                 </p>
+                            </div>
+
+                            <div>
+                                <p class="text-sm text-gray-500">Ár</p>
+                                <p class="text-lg font-medium">{{ isset($entity['price']) ? number_format($entity['price'], 0, ',', ' ') . ' Ft' : '-' }}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-sm text-gray-500">Kiadás éve</p>
+                                <p class="text-lg font-medium">{{ $entity['publication_date'] ?? '-' }}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-sm text-gray-500">Kiadás</p>
+                                <p class="text-lg font-medium">{{ $entity['edition'] ?? '-' }}. kiadás</p>
                             </div>
                             
                             <div>

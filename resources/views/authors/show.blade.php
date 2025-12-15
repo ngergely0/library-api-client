@@ -15,6 +15,27 @@
                         <p class="text-sm text-gray-500">ID: {{ $entity['id'] }}</p>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Nemzetiség</p>
+                            <p class="mt-1 text-sm text-gray-900">{{ $entity['nationality'] ?? '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Életkor</p>
+                            <p class="mt-1 text-sm text-gray-900">{{ $entity['age'] ?? '-' }} év</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500">Nem</p>
+                            <p class="mt-1 text-sm text-gray-900">
+                                @if(isset($entity['gender']))
+                                    {{ $entity['gender'] === 'male' ? 'Férfi' : ($entity['gender'] === 'female' ? 'Nő' : $entity['gender']) }}
+                                @else
+                                    -
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
                     <div class="flex items-center gap-4">
                         <a href="{{ route('authors.books', $entity['id']) }}" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
                             Könyvei

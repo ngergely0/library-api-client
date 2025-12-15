@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\BookRequest;
+use App\Services\ExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -14,25 +15,37 @@ class BookController extends Controller
         $needle = $request->get('needle');
 
         try {
-            $url = $needle ? "books?needle=" . urlencode($needle) : "books";
-
-            $response = Http::api()->get($url);
+            // Fetch all books and filter on client side to support ID search
+            $response = Http::api()->get('books');
 
             if ($response->failed()) {
                 $message = $response->json('message') ?? 'Ismeretlen hiba történt.';
-                return redirect()
-                    ->route('books.index')
-                    ->with('error', "Hiba történt a lekérdezés során: $message");
+                return view('books.index', [
+                    'entities' => [],
+                    'isAuthenticated' => $this->isAuthenticated()
+                ])->with('error', "Hiba történt a lekérdezés során: $message");
             }
 
             $entities = ResponseHelper::getData($response);
 
+            if ($needle) {
+                $needle = strtolower($needle);
+                $entities = array_filter($entities, function($book) use ($needle) {
+                    return str_contains(strtolower($book['name'] ?? ''), $needle) || 
+                           strval($book['id'] ?? '') === $needle ||
+                           str_contains(strtolower($book['author']['name'] ?? ''), $needle) ||
+                           str_contains(strtolower($book['category']['name'] ?? ''), $needle) ||
+                           str_contains(strval($book['isbn'] ?? ''), $needle);
+                });
+            }
+
             return view('books.index', ['entities' => $entities, 'isAuthenticated' => $this->isAuthenticated()]);
 
         } catch (\Exception $e) {
-            return redirect()
-                ->route('books.index')
-                ->with('error', "Nem sikerült betölteni a könyveket: " . $e->getMessage());
+            return view('books.index', [
+                'entities' => [],
+                'isAuthenticated' => $this->isAuthenticated()
+            ])->with('error', "Nem sikerült betölteni a könyveket: " . $e->getMessage());
         }
     }
 
@@ -108,6 +121,9 @@ class BookController extends Controller
                     'author_id' => $request->get('author_id'),
                     'category_id' => $request->get('category_id'),
                     'isbn' => $request->get('isbn'),
+                    'price' => $request->get('price'),
+                    'publication_date' => $request->get('publication_date'),
+                    'edition' => $request->get('edition'),
                 ]);
 
             if ($response->failed()) {
@@ -189,6 +205,9 @@ class BookController extends Controller
                     'author_id' => $request->get('author_id'),
                     'category_id' => $request->get('category_id'),
                     'isbn' => $request->get('isbn'),
+                    'price' => $request->get('price'),
+                    'publication_date' => $request->get('publication_date'),
+                    'edition' => $request->get('edition'),
                 ]);
 
             if ($response->successful()) {
@@ -239,6 +258,106 @@ class BookController extends Controller
             return redirect()
                 ->route('books.index')
                 ->with('error', "Nem sikerült kommunikálni az API-val: " . $e->getMessage());
+        }
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $exportService = new ExportService();
+        
+        // Get filtered data
+        $needle = $request->get('needle');
+        $url = $needle ? "books?needle=" . urlencode($needle) : "books";
+        
+        try {
+            $response = Http::api()->get($url);
+            
+            if ($response->failed()) {
+                return redirect()
+                    ->route('books.index')
+                    ->with('error', 'Nem sikerült exportálni az adatokat.');
+            }
+            
+            $entities = ResponseHelper::getData($response);
+            
+            // Transform data to include author name and other details
+            $transformedData = array_map(function($book) {
+                return [
+                    'id' => $book['id'] ?? '',
+                    'title' => $book['name'] ?? '',
+                    'author_name' => $book['author']['name'] ?? '',
+                    'category_name' => $book['category']['name'] ?? '',
+                    'year' => $book['isbn'] ?? '',
+                    'price' => $book['price'] ?? '',
+                    'publication_date' => $book['publication_date'] ?? '',
+                    'edition' => $book['edition'] ?? '',
+                ];
+            }, $entities);
+            
+            $headers = $exportService->getColumnConfig('books');
+            
+            return $exportService->exportToCsv(
+                $transformedData, 
+                'konyvek_' . date('Y-m-d_His'), 
+                $headers
+            );
+            
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('books.index')
+                ->with('error', "Export hiba: " . $e->getMessage());
+        }
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $exportService = new ExportService();
+        
+        // Get filtered data
+        $needle = $request->get('needle');
+        $url = $needle ? "books?needle=" . urlencode($needle) : "books";
+        
+        try {
+            $response = Http::api()->get($url);
+            
+            if ($response->failed()) {
+                return redirect()
+                    ->route('books.index')
+                    ->with('error', 'Nem sikerült exportálni az adatokat.');
+            }
+            
+            $entities = ResponseHelper::getData($response);
+            
+            // Transform data to include author name and other details
+            $transformedData = array_map(function($book) {
+                return [
+                    'id' => $book['id'] ?? '',
+                    'title' => $book['name'] ?? '',
+                    'author_name' => $book['author']['name'] ?? '',
+                    'category_name' => $book['category']['name'] ?? '',
+                    'year' => $book['isbn'] ?? '',
+                    'price' => $book['price'] ?? '',
+                    'publication_date' => $book['publication_date'] ?? '',
+                    'edition' => $book['edition'] ?? '',
+                ];
+            }, $entities);
+            
+            $headers = $exportService->getColumnConfig('books');
+            $title = $exportService->getTitle('books');
+            $logoPath = public_path('images/logo.png');
+            
+            return $exportService->exportToPdf(
+                $transformedData,
+                'konyvek_' . date('Y-m-d_His'),
+                $title,
+                $headers,
+                $logoPath
+            );
+            
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('books.index')
+                ->with('error', "Export hiba: " . $e->getMessage());
         }
     }
 }

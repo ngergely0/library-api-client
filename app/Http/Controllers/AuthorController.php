@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ResponseHelper;
 use App\Http\Requests\AuthorRequest;
+use App\Services\ExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -14,25 +15,36 @@ class AuthorController extends Controller
         $needle = $request->get('needle');
 
         try {
-            $url = $needle ? "authors?needle=" . urlencode($needle) : "authors";
-
-            $response = Http::api()->get($url);
+            // Fetch all authors and filter on client side to support ID search
+            $response = Http::api()->get('authors');
 
             if ($response->failed()) {
                 $message = $response->json('message') ?? 'Ismeretlen hiba történt.';
-                return redirect()
-                    ->route('authors.index')
-                    ->with('error', "Hiba történt a lekérdezés során: $message");
+                // Return view with error instead of redirecting to avoid loop
+                return view('authors.index', [
+                    'entities' => [], 
+                    'isAuthenticated' => $this->isAuthenticated()
+                ])->with('error', "Hiba történt a lekérdezés során: $message");
             }
 
             $entities = ResponseHelper::getData($response);
 
+            if ($needle) {
+                $needle = strtolower($needle);
+                $entities = array_filter($entities, function($author) use ($needle) {
+                    return str_contains(strtolower($author['name'] ?? ''), $needle) || 
+                           strval($author['id'] ?? '') === $needle;
+                });
+            }
+
             return view('authors.index', ['entities' => $entities, 'isAuthenticated' => $this->isAuthenticated()]);
 
         } catch (\Exception $e) {
-            return redirect()
-                ->route('authors.index')
-                ->with('error', "Nem sikerült betölteni a szerzőket: " . $e->getMessage());
+            // Return view with error instead of redirecting to avoid loop
+            return view('authors.index', [
+                'entities' => [], 
+                'isAuthenticated' => $this->isAuthenticated()
+            ])->with('error', "Nem sikerült betölteni a szerzőket: " . $e->getMessage());
         }
     }
 
@@ -84,11 +96,19 @@ class AuthorController extends Controller
         }
 
         $name = $request->get('name');
+        $nationality = $request->get('nationality');
+        $age = $request->get('age');
+        $gender = $request->get('gender');
 
         try {
             $response = Http::api()
                 ->withToken($this->token)
-                ->post('/authors', ['name' => $name]);
+                ->post('/authors', [
+                    'name' => $name,
+                    'nationality' => $nationality,
+                    'age' => $age,
+                    'gender' => $gender
+                ]);
 
             if ($response->failed()) {
                 $message = $response->json('message') ?? 'Nem sikerült létrehozni a szerzőt.';
@@ -151,11 +171,19 @@ class AuthorController extends Controller
         }
 
         $name = $request->get('name');
+        $nationality = $request->get('nationality');
+        $age = $request->get('age');
+        $gender = $request->get('gender');
 
         try {
             $response = Http::api()
                 ->withToken($this->token)
-                ->put("/authors/$id", ['name' => $name]);
+                ->put("/authors/$id", [
+                    'name' => $name,
+                    'nationality' => $nationality,
+                    'age' => $age,
+                    'gender' => $gender
+                ]);
 
             if ($response->successful()) {
                 return redirect()
@@ -235,6 +263,100 @@ class AuthorController extends Controller
             return redirect()
                 ->route('authors.index')
                 ->with('error', "Nem sikerült betölteni a könyveket: " . $e->getMessage());
+        }
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $exportService = new ExportService();
+        
+        // Get filtered data
+        $needle = $request->get('needle');
+        $url = $needle ? "authors?needle=" . urlencode($needle) : "authors";
+        
+        try {
+            $response = Http::api()->get($url);
+            
+            if ($response->failed()) {
+                return redirect()
+                    ->route('authors.index')
+                    ->with('error', 'Nem sikerült exportálni az adatokat.');
+            }
+            
+            $entities = ResponseHelper::getData($response);
+            
+            // Transform data to ensure keys match config
+            $transformedData = array_map(function($author) {
+                return [
+                    'id' => $author['id'] ?? '',
+                    'name' => $author['name'] ?? '',
+                    'nationality' => $author['nationality'] ?? '',
+                    'age' => $author['age'] ?? '',
+                    'gender' => $author['gender'] ?? '',
+                ];
+            }, $entities);
+
+            $headers = $exportService->getColumnConfig('authors');
+            
+            return $exportService->exportToCsv(
+                $transformedData, 
+                'szerzok_' . date('Y-m-d_His'), 
+                $headers
+            );
+            
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('authors.index')
+                ->with('error', "Export hiba: " . $e->getMessage());
+        }
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $exportService = new ExportService();
+        
+        // Get filtered data
+        $needle = $request->get('needle');
+        $url = $needle ? "authors?needle=" . urlencode($needle) : "authors";
+        
+        try {
+            $response = Http::api()->get($url);
+            
+            if ($response->failed()) {
+                return redirect()
+                    ->route('authors.index')
+                    ->with('error', 'Nem sikerült exportálni az adatokat.');
+            }
+            
+            $entities = ResponseHelper::getData($response);
+            
+            // Transform data to ensure keys match config
+            $transformedData = array_map(function($author) {
+                return [
+                    'id' => $author['id'] ?? '',
+                    'name' => $author['name'] ?? '',
+                    'nationality' => $author['nationality'] ?? '',
+                    'age' => $author['age'] ?? '',
+                    'gender' => $author['gender'] ?? '',
+                ];
+            }, $entities);
+
+            $headers = $exportService->getColumnConfig('authors');
+            $title = $exportService->getTitle('authors');
+            $logoPath = public_path('images/logo.png');
+            
+            return $exportService->exportToPdf(
+                $transformedData,
+                'szerzok_' . date('Y-m-d_His'),
+                $title,
+                $headers,
+                $logoPath
+            );
+            
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('authors.index')
+                ->with('error', "Export hiba: " . $e->getMessage());
         }
     }
 }

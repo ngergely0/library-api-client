@@ -55,6 +55,30 @@
                             @enderror
                         </div>
 
+                        <div class="mb-4">
+                            <label for="publication_date" class="block text-sm font-medium text-gray-700">Kiadás dátuma</label>
+                            <input type="date" name="publication_date" id="publication_date" value="{{ old('publication_date') }}" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                            @error('publication_date')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="edition" class="block text-sm font-medium text-gray-700">Kiadás</label>
+                            <input type="text" name="edition" id="edition" value="{{ old('edition') }}" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                            @error('edition')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="price" class="block text-sm font-medium text-gray-700">Ár (Ft)</label>
+                            <input type="number" name="price" id="price" value="{{ old('price') }}" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required min="0">
+                            @error('price')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div class="flex items-center justify-end mt-4">
                             <a href="{{ route('books.index') }}" class="text-gray-600 hover:text-gray-900 mr-4">Mégse</a>
                             <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
